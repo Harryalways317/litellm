@@ -5412,6 +5412,8 @@ def get_llm_provider(
     api_key: Optional[str] = None,
 ):
     try:
+        if not custom_llm_provider:
+            custom_llm_provider = 'openai'
         dynamic_api_key = None
         # check if llm provider provided
 
