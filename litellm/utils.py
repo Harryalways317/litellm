@@ -2752,7 +2752,12 @@ def client(original_function):
                     "context_window_fallback_dict", {}
                 )
 
-                if num_retries:
+                _is_litellm_router_call = "model_group" in kwargs.get(
+                    "metadata", {}
+                )  # check if call from litellm.router/proxy
+                if (
+                    num_retries and not _is_litellm_router_call
+                ):  # only enter this if call is not from litellm router/proxy. router has it's own logic for retrying
                     if (
                         isinstance(e, openai.APIError)
                         or isinstance(e, openai.Timeout)
@@ -3222,7 +3227,12 @@ def client(original_function):
                     "context_window_fallback_dict", {}
                 )
 
-                if num_retries:
+                _is_litellm_router_call = "model_group" in kwargs.get(
+                    "metadata", {}
+                )  # check if call from litellm.router/proxy
+                if (
+                    num_retries and not _is_litellm_router_call
+                ):  # only enter this if call is not from litellm router/proxy. router has it's own logic for retrying
                     try:
                         kwargs["num_retries"] = num_retries
                         kwargs["original_function"] = original_function
@@ -7215,7 +7225,17 @@ def exception_type(
                             message=f"AnthropicException - {original_exception.message}",
                             llm_provider="anthropic",
                             model=model,
-                            response=original_exception.response,
+                            response=(
+                                original_exception.response
+                                if hasattr(original_exception, "response")
+                                else httpx.Response(
+                                    status_code=500,
+                                    request=httpx.Request(
+                                        method="POST",
+                                        url="https://docs.anthropic.com/claude/reference/messages_post",
+                                    ),
+                                )
+                            ),
                         )
                     else:
                         exception_mapping_worked = True
